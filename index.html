@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Speech to Text</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f2f2f2; }
+    .container { background: #fff; padding: 20px; border-radius: 10px; max-width: 700px; margin: auto; }
+    video { width: 100%; margin-top: 10px; }
+    textarea { width: 100%; height: 200px; margin-top: 20px; font-size: 16px; }
+    button { padding: 10px 20px; margin: 10px 5px 0 0; cursor: pointer; border: none; border-radius: 5px; }
+    .start { background-color: #28a745; color: white; }
+    .stop { background-color: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>ভিডিও → টেক্সট (স্মার্ট ভার্সন)</h2>
+    <input type="file" id="videoInput" accept="video/*"><br>
+    <video id="videoPlayer" controls></video><br>
+    <button class="start" onclick="startTranscription()">Start</button>
+    <button class="stop" onclick="stopTranscription()">Stop</button>
+    <textarea id="output" placeholder="এখানে টেক্সট আসবে..."></textarea>
+  </div>
+
+  <script>
+    const videoInput = document.getElementById('videoInput');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const output = document.getElementById('output');
+    let recognition;
+    let finalTranscript = '';
+
+    videoInput.addEventListener('change', () => {
+      const file = videoInput.files[0];
+      const url = URL.createObjectURL(file);
+      videoPlayer.src = url;
+    });
+
+    async function askMicrophonePermission() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log("Microphone permission granted");
+      } catch (err) {
+        alert("মাইক্রোফোন পারমিশন না দিলে কিছুই হবে না বস! এলাও কর!!");
+      }
+    }
+
+    async function startTranscription() {
+      await askMicrophonePermission();
+
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("SpeechRecognition তোর ব্রাউজারে চলে না! Chrome ব্যাবহার কর।");
+        return;
+      }
+
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      // ভাষা সিলেক্ট কর — বাংলা, হিন্দি, ইংলিশ সাপোর্ট
+      recognition.lang = 'bn-BD'; // হিন্দি 'hi-IN', ইংলিশ 'en-US'
+
+      recognition.onresult = function (event) {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        output.value = finalTranscript + '\n' + interim;
+      };
+
+      recognition.onerror = function (event) {
+        console.error('Speech error:', event.error);
+      };
+
+      recognition.onend = function () {
+        console.log('Recognition ended');
+      };
+
+      recognition.start();
+      videoPlayer.play();
+    }
+
+    function stopTranscription() {
+      if (recognition) {
+        recognition.stop();
+        videoPlayer.pause();
+      }
+    }
+  </script>
+</body>
+</html>
